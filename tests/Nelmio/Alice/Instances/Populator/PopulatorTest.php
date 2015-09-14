@@ -17,12 +17,14 @@ use Nelmio\Alice\Fixtures\Fixture;
 use Nelmio\Alice\Instances\Populator\Methods\ArrayAdd;
 use Nelmio\Alice\Instances\Processor\Processor;
 use Nelmio\Alice\support\extensions\CustomPopulator;
+use Nelmio\Alice\support\models\SingularProperties;
 use Nelmio\Alice\Util\TypeHintChecker;
 
 class PopulatorTest extends \PHPUnit_Framework_TestCase
 {
     const CONTACT = 'Nelmio\Alice\support\models\Contact';
     const PLURAL = 'Nelmio\Alice\support\models\PluralProperties';
+    const SINGULAR = 'Nelmio\Alice\support\models\SingularProperties';
 
     /**
     * @var Collection
@@ -65,16 +67,29 @@ class PopulatorTest extends \PHPUnit_Framework_TestCase
      */
     public function testOnlyMethodInterfacesCanBeUsedToInstantiateThePopulator()
     {
-        $populator = $this->createPopulator(['methods' => ['CustomPopulator']]);
+        $this->createPopulator(['methods' => ['CustomPopulator']]);
     }
 
     /**
      * @TODO https://github.com/nelmio/alice/pull/220#issuecomment-113524513
+     *
+     * @dataProvider arrayAddPropertyProvider
+     *
+     * @param string $fieldName 'field' property name
+     * @param string $propertyName 'property' property name
      */
-    public function testArrayAdd()
+    public function testArrayAddSingularAdder($fieldName, $propertyName)
     {
         $class = self::PLURAL;
-        $fixture = new Fixture($class, 'test', [ 'fields' => ['a', 'b', 'c'], 'properties' => ['q', 'w', 'e'] ], null);
+        $fixture = new Fixture(
+            $class,
+            'test',
+            [
+                $fieldName => ['a', 'b', 'c'],
+                $propertyName => ['q', 'w', 'e']
+            ],
+            null
+        );
         $object = new $class();
 
         $this->createPopulator([ 'objects' => new Collection([ 'test' => $object ]) ]);
@@ -83,5 +98,19 @@ class PopulatorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(['a', 'b', 'c'], $object->getFields());
         $this->assertEquals(['q', 'w', 'e'], $object->getProperties());
+    }
+
+    public static function arrayAddPropertyProvider()
+    {
+        return [
+            'plural property names' => [
+                'fields',
+                'properties',
+            ],
+            'singular property name' => [
+                'field',
+                'property'
+            ]
+        ];
     }
 }

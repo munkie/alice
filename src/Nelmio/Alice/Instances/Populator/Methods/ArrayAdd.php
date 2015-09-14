@@ -34,7 +34,7 @@ class ArrayAdd implements MethodInterface
      */
     public function canSet(Fixture $fixture, $object, $property, $value)
     {
-        return is_array($value) && $this->findAdderMethod($object, $property);
+        return is_array($value) && null !== $this->findAdderMethod($object, $property);
     }
 
     /**
@@ -50,10 +50,11 @@ class ArrayAdd implements MethodInterface
     }
 
     /**
-     * finds the method used to append values to the named property
+     * Finds the method used to append values to the named property.
      *
      * @param mixed  $object
      * @param string $property
+     * @return string|null Adder method name or null if method not found
      */
     private function findAdderMethod($object, $property)
     {
@@ -61,17 +62,9 @@ class ArrayAdd implements MethodInterface
             return $method;
         }
 
-        if (class_exists('Symfony\Component\PropertyAccess\StringUtil') && method_exists('Symfony\Component\PropertyAccess\StringUtil', 'singularify')) {
-            foreach ((array) StringUtil::singularify($property) as $singularForm) {
-                if (method_exists($object, $method = 'add'.$singularForm)) {
-                    return $method;
-                }
-            }
-        } elseif (class_exists('Symfony\Component\Form\Util\FormUtil') && method_exists('Symfony\Component\Form\Util\FormUtil', 'singularify')) {
-            foreach ((array) FormUtil::singularify($property) as $singularForm) {
-                if (method_exists($object, $method = 'add'.$singularForm)) {
-                    return $method;
-                }
+        foreach ($this->singularify($property) as $singularForm) {
+            if (method_exists($object, $method = 'add'.$singularForm)) {
+                return $method;
             }
         }
 
@@ -81,6 +74,29 @@ class ArrayAdd implements MethodInterface
 
         if (substr($property, -3) === 'ies' && method_exists($object, $method = 'add'.substr($property, 0, -3).'y')) {
             return $method;
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns singular forms of a property name.
+     *
+     * @param string $property
+     * @return string[] array of possible singular forms
+     */
+    private function singularify($property)
+    {
+        if (class_exists('Symfony\Component\PropertyAccess\StringUtil')
+            && method_exists('Symfony\Component\PropertyAccess\StringUtil', 'singularify')
+        ) {
+            return (array) StringUtil::singularify($property);
+        } elseif (class_exists('Symfony\Component\Form\Util\FormUtil')
+            && method_exists('Symfony\Component\Form\Util\FormUtil', 'singularify')
+        ) {
+            return (array) FormUtil::singularify($property);
+        } else {
+            return [];
         }
     }
 }
